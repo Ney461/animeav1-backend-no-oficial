@@ -138,8 +138,14 @@ def _parse_anime_metadata(soup: BeautifulSoup, slug: str) -> dict:
 
 def _parse_episode_cards(soup: BeautifulSoup, slug: str) -> list[dict]:
     result, seen = [], set()
-    selector = "a[href*='/media/']" if not slug else f"a[href*='/media/{slug}/']"
-    for anchor in soup.select(selector):
+    if not slug:
+        episodes_heading = soup.find("h2", string=lambda text: text and "Episodios" in text)
+        section = episodes_heading.find_parent("section") if episodes_heading else soup
+        selector = "article a[href*='/media/']"
+        anchors = section.select(selector)
+    else:
+        anchors = soup.select(f"a[href*='/media/{slug}/']")
+    for anchor in anchors:
         href = anchor.get("href", "").rstrip("/")
         match = re.search(r"/media/[^/]+/(\d+)$", href)
         if not match:
@@ -148,15 +154,19 @@ def _parse_episode_cards(soup: BeautifulSoup, slug: str) -> list[dict]:
         if number in seen:
             continue
         seen.add(number)
-        image = anchor.find("img")
+        container = anchor.find_parent("article") or anchor
+        image = container.find("img", src=lambda value: value and "/thumbnails/" in value)
         thumbnail = image.get("src", "") if image else ""
+        title = _text(container.find("header"))
+        if not title:
+            title = re.sub(r"^Ver\s+|\s+\d+$", "", _text(anchor))
         result.append({
             "number": number,
-            "title": _text(anchor) or f"Episode {number}",
+            "title": title or f"Episode {number}",
             "url": f"{BASE_URL}{href}",
             "thumbnail": thumbnail,
         })
-    return sorted(result, key=lambda episode: episode["number"])
+    return result if not slug else sorted(result, key=lambda episode: episode["number"])
 
 
 def _parse_source_episodes(html: str, slug: str, anime_id: int) -> list[dict]:
@@ -175,9 +185,31 @@ def _parse_source_episodes(html: str, slug: str, anime_id: int) -> list[dict]:
     return sorted({episode["number"]: episode for episode in episodes}.values(), key=lambda item: item["number"])
 
 
+def _parse_latest_episodes(html: str) -> list[dict]:
+    """Parsea latestEpisodes conservando el orden de actualizacion de la fuente."""
+    match = re.search(r"latestEpisodes:\[(.*?)\],latestMedia:", html, re.DOTALL)
+    if not match:
+        return []
+    pattern = re.compile(
+        r"media:\{id:(?P<media_id>\d+),slug:\"(?P<slug>[^\"]+)\","
+        r"title:\"(?P<title>(?:\\.|[^\"\\])*)\"\},number:(?P<number>\d+)"
+    )
+    return [
+        {
+            "number": int(item.group("number")),
+            "title": item.group("title"),
+            "url": f"{BASE_URL}/media/{item.group('slug')}/{item.group('number')}",
+            "thumbnail": f"https://cdn.animeav1.com/thumbnails/{item.group('media_id')}.jpg",
+        }
+        for item in pattern.finditer(match.group(1))
+    ]
+
+
 def _parse_anime_cards(soup: BeautifulSoup) -> list[dict]:
     result, seen = [], set()
-    anchors = soup.select("article a[href*='/media/']") or soup.select("a[href*='/media/']")
+    animes_heading = soup.find("h2", string=lambda text: text and "Animes" in text)
+    section = animes_heading.find_parent("section") if animes_heading else soup
+    anchors = section.select("article a[href*='/media/']") or section.select("a[href*='/media/']")
     for anchor in anchors:
         href = anchor.get("href", "").rstrip("/")
         slug = href.split("/")[-1]
@@ -254,18 +286,41 @@ def _parse_catalog_cards(
     return list(cards.values())
 
 
+def _enrich_anime_cards(cards: list[dict]) -> list[dict]:
+    """Completa year/status consultando el metadata de cada anime."""
+    for card in cards:
+        try:
+            metadata = _parse_anime_metadata(
+                get_soup(f"{BASE_URL}/media/{card['slug']}"),
+                card["slug"],
+            )
+            card["year"] = metadata["year"]
+            card["status"] = metadata["status"]
+            if not card.get("cover"):
+                card["cover"] = metadata["cover"]
+            if not card.get("type"):
+                card["type"] = metadata["type"]
+        except HTTPException:
+            card["year"] = card.get("year")
+            card["status"] = card.get("status") or "unknown"
+    return cards
+
+
 def get_recent() -> dict:
     soup = get_soup(BASE_URL)
-    return {"episodes": _parse_episode_cards(soup, ""), "animes": _parse_anime_cards(soup)}
+    html = str(soup)
+    episodes = _parse_latest_episodes(html) or _parse_episode_cards(soup, "")
+    return {"episodes": episodes, "animes": _enrich_anime_cards(_parse_anime_cards(soup))}
 
 
 def get_recent_episodes() -> dict:
     soup = get_soup(BASE_URL)
-    return {"episodes": _parse_episode_cards(soup, "")}
+    episodes = _parse_latest_episodes(str(soup)) or _parse_episode_cards(soup, "")
+    return {"episodes": episodes}
 
 
 def get_recent_animes() -> dict:
-    return {"animes": _parse_anime_cards(get_soup(BASE_URL))}
+    return {"animes": _enrich_anime_cards(_parse_anime_cards(get_soup(BASE_URL)))}
 
 
 def get_catalog(
@@ -301,7 +356,7 @@ def get_catalog(
     }
     query = {key: value for key, value in source_filters.items() if value not in (None, "", [])}
     soup = get_soup(f"{BASE_URL}/catalogo?{urlencode(query, doseq=True)}")
-    animes = _parse_catalog_cards(soup, min_year, max_year)
+    animes = _enrich_anime_cards(_parse_catalog_cards(soup, min_year, max_year))
     if status:
         for anime in animes:
             anime["status"] = status

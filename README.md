@@ -143,6 +143,13 @@ incluye `title`, `slug`, `episode`, `air_date`, `air_time` y `url`.
 
 ### Endpoints basicos
 
+`GET /episodes` devuelve los 20 episodios mas recientemente actualizados por la
+fuente, en orden descendente de actualizacion. Cada elemento incluye `number`,
+`title` (el nombre del anime), `url` y `thumbnail`.
+
+`GET /animes` devuelve los animes agregados recientemente. La portada usa la
+ruta `covers` del anime, no el backdrop del hero de la pagina principal.
+
 | Metodo | Ruta | Descripcion |
 |--------|------|-------------|
 | GET | `/` | Info de la API |
