@@ -15,9 +15,11 @@ class AnimeCard(BaseModel):
 
 class EpisodeCard(BaseModel):
     number: int
+    slug: str = ""
     title: str = ""
     url: str
     thumbnail: str = ""
+    status: str = ""
 
 
 class CatalogResponse(BaseModel):

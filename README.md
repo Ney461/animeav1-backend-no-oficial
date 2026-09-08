@@ -93,6 +93,10 @@ Respuesta resumida:
 la página actual. `per_page` es el límite de la fuente (normalmente 20) y
 `total_pages` es el número total de páginas.
 
+El catálogo devuelve tarjetas ligeras y no consulta el detalle individual de cada
+anime. Cuando se usa `status`, ese valor se refleja directamente en las tarjetas;
+para metadata completa usa `GET /anime/{slug}`.
+
 Ejemplo real: `/catalog?status=airing&order=default` devuelve `total: 78`,
 `total_page: 20`, `per_page: 20` y `total_pages: 4`.
 
@@ -144,11 +148,14 @@ incluye `title`, `slug`, `episode`, `air_date`, `air_time` y `url`.
 ### Endpoints basicos
 
 `GET /episodes` devuelve los 20 episodios mas recientemente actualizados por la
-fuente, en orden descendente de actualizacion. Cada elemento incluye `number`,
-`title` (el nombre del anime), `url` y `thumbnail`.
+fuente, en orden descendente de actualizacion. Es una consulta ligera a la home:
+no solicita el detalle de cada anime ni trae `year` o generos. Cada elemento
+incluye `number`, `slug`, `title` (el nombre del anime), `url`, `thumbnail` y
+`status: "airing"`.
 
-`GET /animes` devuelve los animes agregados recientemente. La portada usa la
-ruta `covers` del anime, no el backdrop del hero de la pagina principal.
+`GET /animes` devuelve los animes agregados recientemente sin hacer consultas
+adicionales de metadata. La portada usa la ruta `covers` del anime, no el
+backdrop del hero de la pagina principal.
 
 | Metodo | Ruta | Descripcion |
 |--------|------|-------------|

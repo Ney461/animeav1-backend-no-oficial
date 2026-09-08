@@ -2,7 +2,9 @@
 
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from functools import lru_cache
 from urllib.parse import urlencode
 
 import cloudscraper
@@ -162,6 +164,7 @@ def _parse_episode_cards(soup: BeautifulSoup, slug: str) -> list[dict]:
             title = re.sub(r"^Ver\s+|\s+\d+$", "", _text(anchor))
         result.append({
             "number": number,
+            "slug": href.split("/")[-2],
             "title": title or f"Episode {number}",
             "url": f"{BASE_URL}{href}",
             "thumbnail": thumbnail,
@@ -197,9 +200,11 @@ def _parse_latest_episodes(html: str) -> list[dict]:
     return [
         {
             "number": int(item.group("number")),
+            "slug": item.group("slug"),
             "title": item.group("title"),
             "url": f"{BASE_URL}/media/{item.group('slug')}/{item.group('number')}",
             "thumbnail": f"https://cdn.animeav1.com/thumbnails/{item.group('media_id')}.jpg",
+            "status": "airing",
         }
         for item in pattern.finditer(match.group(1))
     ]
@@ -286,31 +291,37 @@ def _parse_catalog_cards(
     return list(cards.values())
 
 
+@lru_cache(maxsize=256)
+def _get_card_metadata(slug: str) -> dict:
+    """Obtiene metadata de una tarjeta y la conserva entre peticiones calientes."""
+    return _parse_anime_metadata(get_soup(f"{BASE_URL}/media/{slug}"), slug)
+
+
+def _enrich_card(card: dict) -> dict:
+    try:
+        metadata = _get_card_metadata(card["slug"])
+        card["year"] = metadata["year"]
+        card["status"] = metadata["status"]
+        if not card.get("cover"):
+            card["cover"] = metadata["cover"]
+        if not card.get("type"):
+            card["type"] = metadata["type"]
+    except HTTPException:
+        card["status"] = card.get("status") or "unknown"
+    return card
+
+
 def _enrich_anime_cards(cards: list[dict]) -> list[dict]:
-    """Completa year/status consultando el metadata de cada anime."""
-    for card in cards:
-        try:
-            metadata = _parse_anime_metadata(
-                get_soup(f"{BASE_URL}/media/{card['slug']}"),
-                card["slug"],
-            )
-            card["year"] = metadata["year"]
-            card["status"] = metadata["status"]
-            if not card.get("cover"):
-                card["cover"] = metadata["cover"]
-            if not card.get("type"):
-                card["type"] = metadata["type"]
-        except HTTPException:
-            card["year"] = card.get("year")
-            card["status"] = card.get("status") or "unknown"
-    return cards
+    """Completa tarjetas en paralelo para evitar veinte requests secuenciales."""
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(cards)))) as executor:
+        return list(executor.map(_enrich_card, cards))
 
 
 def get_recent() -> dict:
     soup = get_soup(BASE_URL)
     html = str(soup)
     episodes = _parse_latest_episodes(html) or _parse_episode_cards(soup, "")
-    return {"episodes": episodes, "animes": _enrich_anime_cards(_parse_anime_cards(soup))}
+    return {"episodes": episodes, "animes": _parse_anime_cards(soup)}
 
 
 def get_recent_episodes() -> dict:
@@ -320,7 +331,7 @@ def get_recent_episodes() -> dict:
 
 
 def get_recent_animes() -> dict:
-    return {"animes": _enrich_anime_cards(_parse_anime_cards(get_soup(BASE_URL)))}
+    return {"animes": _parse_anime_cards(get_soup(BASE_URL))}
 
 
 def get_catalog(
@@ -356,7 +367,7 @@ def get_catalog(
     }
     query = {key: value for key, value in source_filters.items() if value not in (None, "", [])}
     soup = get_soup(f"{BASE_URL}/catalogo?{urlencode(query, doseq=True)}")
-    animes = _enrich_anime_cards(_parse_catalog_cards(soup, min_year, max_year))
+    animes = _parse_catalog_cards(soup, min_year, max_year)
     if status:
         for anime in animes:
             anime["status"] = status
