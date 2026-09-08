@@ -20,6 +20,18 @@ from services.catalog_options import (
 
 BASE_URL = "https://animeav1.com"
 STATUS_NAMES = {0: "unknown", 1: "finished", 2: "airing", 3: "upcoming"}
+SOURCE_STATUS = {
+    "airing": "emision",
+    "finished": "finalizado",
+    "upcoming": "proximamente",
+}
+SOURCE_CATEGORIES = {
+    "tv": "tv-anime",
+    "movie": "pelicula",
+    "ova": "ova",
+    "special": "especial",
+    "ona": "ona",
+}
 
 
 def make_scraper():
@@ -277,9 +289,22 @@ def get_catalog(
         "type": anime_type,
         "order": order,
     }
-    query = {key: value for key, value in filters.items() if value not in (None, "", [])}
+    source_filters = {
+        "page": page,
+        "letter": letter,
+        "genre": genre,
+        "minYear": min_year,
+        "maxYear": max_year,
+        "status": SOURCE_STATUS.get(status, status) if status else None,
+        "category": SOURCE_CATEGORIES.get(anime_type, anime_type) if anime_type else None,
+        "order": order,
+    }
+    query = {key: value for key, value in source_filters.items() if value not in (None, "", [])}
     soup = get_soup(f"{BASE_URL}/catalogo?{urlencode(query, doseq=True)}")
     animes = _parse_catalog_cards(soup, min_year, max_year)
+    if status:
+        for anime in animes:
+            anime["status"] = status
     pagination = _parse_catalog_pagination(str(soup), page, len(animes))
     return {
         "page": pagination["page"],

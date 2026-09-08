@@ -70,6 +70,11 @@ Valores disponibles:
 - `genre`: consulta `/catalog/options` para obtener la lista completa de slugs.
 - `minYear` y `maxYear`: rango inclusivo entre `1900` y el ano actual. Para un ano exacto usa el mismo valor en ambos; `minYear` no puede ser mayor que `maxYear`.
 
+La API usa valores faciles de consumir y los traduce al formato interno de la
+fuente: `airing` se envia como `emision`, `finished` como `finalizado`,
+`upcoming` como `proximamente`; y `tv`, `movie`, `ova`, `special` y `ona` se
+envian mediante el filtro oficial `category`.
+
 Respuesta resumida:
 
 ```json
@@ -87,6 +92,9 @@ Respuesta resumida:
 `total` es el total global del filtro. `total_page` es la cantidad devuelta en
 la página actual. `per_page` es el límite de la fuente (normalmente 20) y
 `total_pages` es el número total de páginas.
+
+Ejemplo real: `/catalog?status=airing&order=default` devuelve `total: 78`,
+`total_page: 20`, `per_page: 20` y `total_pages: 4`.
 
 ### Busqueda por nombre
 
