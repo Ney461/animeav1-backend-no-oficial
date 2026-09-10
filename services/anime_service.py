@@ -49,7 +49,7 @@ def get_soup(url: str) -> BeautifulSoup:
         try:
             response = scraper.get(url, timeout=20)
             response.raise_for_status()
-            return BeautifulSoup(response.text, "html.parser")
+            return BeautifulSoup(response.content, "html.parser")
         except Exception as error:
             if attempt < 3:
                 time.sleep(2)
