@@ -81,7 +81,7 @@ Respuesta resumida:
 {
 	"page": 1,
 	"total": 29,
-	"total_page": 20,
+	"items_on_page": 20,
 	"per_page": 20,
 	"total_pages": 2,
 	"filters": {"genre": ["comedia", "drama"], "minYear": 2020, "maxYear": 2025},
@@ -89,7 +89,7 @@ Respuesta resumida:
 }
 ```
 
-`total` es el total global del filtro. `total_page` es la cantidad devuelta en
+`total` es el total global del filtro. `items_on_page` es la cantidad devuelta en
 la página actual. `per_page` es el límite de la fuente (normalmente 20) y
 `total_pages` es el número total de páginas.
 
@@ -98,7 +98,7 @@ anime. Cuando se usa `status`, ese valor se refleja directamente en las tarjetas
 para metadata completa usa `GET /anime/{slug}`.
 
 Ejemplo real: `/catalog?status=airing&order=default` devuelve `total: 78`,
-`total_page: 20`, `per_page: 20` y `total_pages: 4`.
+`items_on_page: 20`, `per_page: 20` y `total_pages: 4`.
 
 ### Busqueda por nombre
 

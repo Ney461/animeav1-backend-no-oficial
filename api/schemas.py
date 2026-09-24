@@ -25,7 +25,7 @@ class EpisodeCard(BaseModel):
 class CatalogResponse(BaseModel):
     page: int
     total: int
-    total_page: int
+    items_on_page: int
     per_page: int
     total_pages: int
     filters: dict[str, str | int | list[str] | None]

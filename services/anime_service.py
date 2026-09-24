@@ -375,7 +375,7 @@ def get_catalog(
     return {
         "page": pagination["page"],
         "total": pagination["total"],
-        "total_page": pagination["total_page"],
+        "items_on_page": pagination["items_on_page"],
         "per_page": pagination["per_page"],
         "total_pages": pagination["total_pages"],
         "filters": filters,
@@ -393,7 +393,7 @@ def _parse_catalog_pagination(html: str, page: int, page_size: int) -> dict:
         return {
             "page": page,
             "total": page_size,
-            "total_page": page_size,
+            "items_on_page": page_size,
             "per_page": page_size,
             "total_pages": 1,
         }
@@ -401,7 +401,7 @@ def _parse_catalog_pagination(html: str, page: int, page_size: int) -> dict:
     return {
         "page": current_page,
         "total": total,
-        "total_page": page_size,
+        "items_on_page": page_size,
         "per_page": per_page,
         "total_pages": total_pages,
     }
