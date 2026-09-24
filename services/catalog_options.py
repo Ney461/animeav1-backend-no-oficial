@@ -2,6 +2,8 @@
 
 from datetime import date
 
+CATALOG_MIN_YEAR = 1900
+CATALOG_MAX_YEAR = date.today().year
 CATALOG_GENRES = [
     "accion", "aventura", "ciencia-ficcion", "comedia", "deportes", "drama",
     "fantasia", "misterio", "recuentos-de-la-vida", "romance", "seinen", "shoujo",
@@ -15,4 +17,4 @@ CATALOG_TYPES = ["tv", "movie", "ova", "special", "ona"]
 CATALOG_STATUSES = ["airing", "finished", "upcoming"]
 CATALOG_ORDERS = ["default", "score", "popular", "title", "recent", "premieres"]
 CATALOG_LETTERS = list("#ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-CATALOG_YEARS = list(range(1900, date.today().year + 1))
+CATALOG_YEARS = list(range(CATALOG_MIN_YEAR, CATALOG_MAX_YEAR + 1))

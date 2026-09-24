@@ -25,6 +25,8 @@ from services.anime_service import (
 from services.catalog_options import (
     CATALOG_GENRES,
     CATALOG_LETTERS,
+    CATALOG_MAX_YEAR,
+    CATALOG_MIN_YEAR,
     CATALOG_ORDERS,
     CATALOG_STATUSES,
     CATALOG_TYPES,
@@ -145,8 +147,20 @@ def catalog(
             "for example `genre=comedia&genre=drama`."
         ),
     ),
-    min_year: int | None = Query(None, alias="minYear", ge=1900, le=2100, description="Minimum release year."),
-    max_year: int | None = Query(None, alias="maxYear", ge=1900, le=2100, description="Maximum release year."),
+    min_year: int | None = Query(
+        None,
+        alias="minYear",
+        ge=CATALOG_MIN_YEAR,
+        le=CATALOG_MAX_YEAR,
+        description="Minimum release year.",
+    ),
+    max_year: int | None = Query(
+        None,
+        alias="maxYear",
+        ge=CATALOG_MIN_YEAR,
+        le=CATALOG_MAX_YEAR,
+        description="Maximum release year.",
+    ),
     status: str | None = Query(None, description="Allowed: `airing`, `finished` or `upcoming`."),
     anime_type: str | None = Query(None, alias="type", description="Allowed: `tv`, `movie`, `ova`, `special` or `ona`."),
     order: str | None = Query(None, description="Allowed: `default`, `score`, `popular`, `title`, `recent` or `premieres`."),
